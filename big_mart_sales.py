@@ -45,13 +45,14 @@
 #  
 #  Exploratory data analysis:
 #  1. Variable Identification
-#  2. Preprocessing
+#  2. Data Cleaning
 #  3. Univariate analysis
 #  4. Bivariate analysis
+#  5. Preprocessing
 #  
 #  
 #  Preprocessing: [Tree-based and non-tree based models require different kind of preprocessing to be done]
-#  1. Data cleaning
+#  1. Data cleaning and Missing Value treatment
 #  1. Encoding categorical variables
 #      * tree based model can work well with label encoding
 #      * non tree based models (linear models, neural networks) need one hot encoding if there aren't any hierarchical categories.
@@ -59,7 +60,6 @@
 #      * **Important**: one hot encoded features are always scaled. 
 #      * Prefer label encoding over one hot for tree based models
 #      * If a feature has many unique values, then use sparse matrix as there will be many zeros in one hot encoded format.
-#  2. Missing Value treatment
 #  3. Outlier Detection
 #  4. Variable Transformation
 #     * Normalization - Scaling
@@ -88,7 +88,7 @@
 
 # ## * Model Building
 
-# In[1]:
+# In[102]:
 
 
 import pandas as pd
@@ -102,82 +102,87 @@ import nltk
 # ### * Exploratory Data Analysis Steps
 # 1. Variable Identification
 
-# In[58]:
+# In[103]:
 
 
 train = pd.read_csv('Train_UWu5bXk.txt', sep = ',')
 
 
-# In[59]:
+# In[104]:
 
 
 test = pd.read_csv('Test_u94Q5KV.txt', sep = ',')
 
 
-# In[60]:
+# In[105]:
 
 
 print(train.shape)
 print(test.shape)
 
 
-# In[61]:
+# In[106]:
 
 
 train.head()
 
 
-# In[62]:
+# In[107]:
 
 
 test.head()
 
 
-# In[63]:
+# In[108]:
 
 
 train.isnull().sum(axis = 1).sort_values(ascending = False)
 
 
-# In[64]:
+# In[109]:
 
 
 train.isnull().sum(axis = 0).sort_values(ascending = False)
 
 
-# In[65]:
+# In[110]:
 
 
 data = pd.concat([train, test], ignore_index=True)
 
 
-# In[66]:
+# In[111]:
 
 
 data.info()
 
 
-# #### Classification of Variables:
-# We will classify the variables on two basis. The first basis of classification is whether they are string or numbers. This result has been presented above. The second classification is whether they are continuous or discrete. If they are continuous we will look at its mean, median, mode and visualize them by plotting histograms. If they are categorical, we will see the unique number of entries and then will plot the countplots.
-# 
-
-# In[71]:
+# In[112]:
 
 
 data.nunique().sort_values()
 
 
+# #### Classification of Variables:
+# We will classify the variables on two basis. The first basis of classification is whether they are string or numbers. This result has been presented above. The second classification is whether they are continuous or discrete. If they are continuous we will look at its mean, median, mode and visualize them by plotting histograms. If they are categorical, we will see the unique number of entries and then will plot the countplots.
+# 
+# #### Variable Identification results:
+# 1. Categorical : 'Item_Fat_Content','Item_Type','Outlet_Size','Outlet_Type', 'Outlet_Location_Type', 'Item_Identifier','Outlet_Identifier', 'Outlet_Establishment_Year'
+# 2. Continuous : 'Item_Weight', 'Item_Visibility', 'Item_MRP', 'Item_Outlet_Sales'
+# 
+
 # All features having unique values less than 20 are a categorical variables.
 
-# ## 1. Preliminary Cleaning
+# ## * Exploratory Data Analysis
+# 2. Data Cleaning and Missing Values Treatment
 
-# In[42]:
+# In[113]:
 
 
 data.columns
 
 
-# In[53]:
+# In[114]:
 
 
 for col in ['Item_Fat_Content', 'Item_Type', 'Outlet_Identifier','Outlet_Establishment_Year', 'Outlet_Size', 'Outlet_Location_Type',
@@ -185,7 +190,7 @@ for col in ['Item_Fat_Content', 'Item_Type', 'Outlet_Identifier','Outlet_Establi
     print(col, data[col].unique())
 
 
-# In[54]:
+# In[115]:
 
 
 data.Item_Fat_Content.unique()
@@ -193,7 +198,7 @@ data.Item_Fat_Content.unique()
 
 # We have to merge low fat, LF with Low Fat and reg with 'Regular'.
 
-# In[55]:
+# In[116]:
 
 
 data['Item_Fat_Content'] = data['Item_Fat_Content'].replace(['low fat', 'LF'], 'Low Fat')
@@ -201,313 +206,218 @@ data['Item_Fat_Content'] = data['Item_Fat_Content'].replace(['reg'], 'Regular')
 data.Item_Fat_Content.nunique()
 
 
-# In[16]:
+# In[117]:
 
 
-for col in train[['Item_Fat_Content','Item_Type','Outlet_Size','Outlet_Type', 'Outlet_Location_Type' ]]:
-    print(train[col].unique())
+for col in data[['Item_Fat_Content','Item_Type','Outlet_Size','Outlet_Type', 'Outlet_Location_Type' ]]:
+    print(data[col].unique())
 
 
-# # Variable Identification result:
-# 1. Categorical : 'Item_Fat_Content','Item_Type','Outlet_Size','Outlet_Type', 'Outlet_Location_Type', Item_Identifier,'Outlet_Identifier', 'Outlet_Establishment_Year'
-# 2. Continuous : 'Item_Weight', 'Item_Visibility', 'Item_MRP', 
-
-# In[17]:
+# In[118]:
 
 
-train.columns
+data.isnull().sum()
 
 
-# ## 2. Univariate Analysis
+# #### Comments:
+# 
+# 
+# 1. Item_Outlet_Sales is the target variable. All the missing values correspond to the test file.
+# 2. Item_Weight has 2439 and Outlet_Size has 4016 missing values.
+# 3. Since, Outlet_Size has a lot of missing values, we need to decide whether we can drop this variable entirely.
+# 4. We will impute Item_Weight with the mean of each item identifier
 
-# In[18]:
-
-
-train['Item_Weight2'] = train['Item_Weight'].fillna(train['Item_Weight'].mean())
-
-
-# In[19]:
-
-
-sns.distplot(train.Item_Weight2, bins = 10)
+# In[119]:
 
 
-# In[20]:
+data[['Item_Identifier','Item_Weight']].drop_duplicates().dropna()['Item_Identifier'].value_counts()
 
 
-train['Item_Weight'] = train['Item_Weight2']
+# The above result shows that each Identifier is mapped to only one weight. So we can safely replace nan with the item weights mapped to each item identifiers
+
+# In[124]:
 
 
-# In[21]:
+# get average weights for each identifier
+avg_weight = data[['Item_Identifier','Item_Weight']].groupby('Item_Identifier').mean()
+data = data.merge(avg_weight, how = 'left', on = 'Item_Identifier').drop('Item_Weight_x', axis = 1).rename(columns = {'Item_Weight_y':'Item_Weight'})
 
 
-train =  train.drop('Item_Weight2', axis = 1)
+# In[ ]:
 
 
-# In[22]:
+# imputing outlet size based on the 
 
 
-train.columns
+# In[136]:
 
 
-# In[23]:
+print(data[['Outlet_Size','Outlet_Identifier']].drop_duplicates())
+print('\n')
+print(data[['Outlet_Size','Outlet_Type']].drop_duplicates())
 
 
-sns.countplot(train.Item_Fat_Content)
+# Observation:
+# * 3 of the outlets always have NaN values as Outlet Size
+# * Grocery store is Nan or small, and Supermarket Type 1 is mapped to all possible values (small, medium, high, nan)
+# * We can impute the missing values based on the mode of outlet size in each category of outlet_type
+
+# In[170]:
 
 
-# In[24]:
+mode_outlet_size = data.groupby(by = 'Outlet_Type').agg(lambda x: x.value_counts().index[0])['Outlet_Size']
+mode_outlet_size = mode_outlet_size.reset_index()
+print(mode_outlet_size)
 
 
-sns.distplot(train.Item_Visibility, bins = 10)
+# In[176]:
 
 
-# In[25]:
+# Imputing missing outlet size
+data = data.merge(mode_outlet_size, how = 'left', left_on = 'Outlet_Type', right_on = 'Outlet_Type')
+data = data.drop('Outlet_Size_x', axis = 1)
+data.rename(columns = {'Outlet_Size_y':'Outlet_Size'}, inplace = True)
 
 
-plt.figure(figsize= [25,6])
-sns.countplot(train.Item_Type, orient =30)
+# In[177]:
 
 
-# In[26]:
+data.isnull().sum()
 
 
-train.columns
+# ## * Exploratory Data Analysis
+# 3. Univariate Analysis
+
+# In[181]:
 
 
-# In[27]:
+sns.distplot(data.Item_Weight)
 
 
-sns.distplot(train.Item_MRP)
+# In[183]:
 
 
-# # 3. Bivariate Analysis
-# 1. continuous continuous
-# 2. continuous categorical
-# 3. categorical categorical
-
-# In[28]:
+sns.countplot(data.Item_Fat_Content)
 
 
-train.columns
+# In[184]:
 
 
-# Hypothesis : Light wright items should have higher visibility
-
-# In[29]:
+sns.distplot(data.Item_Visibility, bins = 10)
 
 
-sns.scatterplot(x = train.Item_Weight, y = train.Item_Visibility)
+# In[214]:
 
 
-# In[30]:
+plt.figure(figsize= [25,12])
+sns.set(style='darkgrid')
+chart = sns.countplot(data.Item_Type, order = data.Item_Type.value_counts().index)
+chart.set_xticklabels(chart.get_xticklabels(), rotation = 40)
+plt.show()
 
 
-sns.pairplot(train)
+# In[215]:
+
+
+sns.distplot(data.Item_MRP)
+
+
+# ## * Exploratory Data Analysis
+# 4. Bivariate Analysis
+# * continuous & continuous
+# * continuous & categorical
+# * categorical & categorical
+
+# ### 1. continuous and continuous
+
+# In[218]:
+
+
+sns.scatterplot(x = data.Item_Weight, y = data.Item_Visibility)
+
+
+# In[217]:
+
+
+sns.pairplot(data)
 
 
 # ### 2. Categorical and continuous
 # 
 
-# In[31]:
+# In[219]:
 
 
-train.columns
+sns.boxplot(x = data.Item_Fat_Content, y = data.Item_Outlet_Sales)
 
 
-# In[32]:
+# In[220]:
 
 
-sns.boxplot(x = train.Item_Fat_Content, y = train.Item_Outlet_Sales)
+sns.boxplot(x = data.Item_Fat_Content, y = data.Item_MRP)
 
 
-# In[33]:
+# In[242]:
 
 
-sns.boxplot(x = train.Item_Fat_Content, y = train.Item_MRP)
+sns.boxplot(x = data.Item_Fat_Content, y = data.Item_Visibility)
 
 
-# In[34]:
+# In[ ]:
 
 
-sns.boxplot(x = train.Item_Fat_Content, y = train.Item_Visibility)
 
 
-# In[35]:
+
+# In[224]:
 
 
 def boxcompare(categorical, continuous):
     plt.figure(figsize=[20,6])
-    sns.boxplot(x = categorical, y = continuous, data = train)
+    sns.boxplot(x = categorical, y = continuous, data = data)
     
 
 
-# In[36]:
+# In[225]:
 
 
 boxcompare('Item_Type', 'Item_MRP')
 
 
-# In[37]:
+# In[226]:
 
 
 boxcompare('Item_Type', 'Item_Outlet_Sales')
 
 
-# We should combine both the train and test sets together before implementing feature engineering. This prevents us from doing the same work twice. In the data exploration step, we have already covered variable identification, univariate analysis, and bivariate analysis. Now we will move on to the remaining steps i.e., Missing Values Imputation, Outliers Handling, Feature Engineering and Feature Normalization.
-
-# In[38]:
+# In[241]:
 
 
-train['Source'] = 'train'
-test['Source'] = 'test'
+
+for col in [ 'Item_Fat_Content', 'Item_Type',
+        'Outlet_Establishment_Year',
+       'Outlet_Location_Type', 'Outlet_Type',  'Outlet_Size']:
+    plt.figure()
+    sns.countplot(x = data[col] )
 
 
-# In[39]:
-
-
-data = pd.concat([train, test], ignore_index= True)
-
-
-# In[40]:
-
-
-train.shape, test.shape, data.shape
-
-
-# In[41]:
-
-
-data.apply(lambda x : sum(x.isnull()))
-
-
-# In[17]:
-
-
-data.apply(lambda x : x.nunique())
-
-
-# In[43]:
-
-
-categorical_columns = [x for x in data.dtypes.index if data.dtypes[x] == 'object']
-
-
-# In[44]:
-
-
-categorical_columns2 = [x for x in data.columns if data.dtypes[x] == 'object']
-
-
-# In[45]:
-
-
-categorical_columns2
-
-
-# In[46]:
-
-
-for col in ('Item_Identifier', 'Outlet_Identifier', 'Source'):
-     categorical_columns2.remove(col)
-
-
-# In[47]:
-
-
-categorical_columns = categorical_columns2
-
-
-# In[48]:
-
-
-categorical_columns
-
-
-# In[49]:
-
-
-for col in categorical_columns:
-
-    plt.figure(figsize = [20,6])
-    sns.countplot(x = train[col] )
-
-
-# # Conclusions:
+# ### Conclusions of Univariate and Bivariate Analysis:
 # 1. There are more low fat products
-# 2. Fruits and Vegetables are the best sellers
-# 3. The maximum number of outlets are present in Tier 2
-# 4. Most of the outlets are of medium size.
+# 2. Fruits and Vegetables are the bestsellers
+# 3. The maximum number of outlets are present in Tier 3
+# 4. Most of the outlets are of small size.
 # 5. The highest number of supermarkets are of Type 1.
+# 6. Starchy foods are the most expensive ones on an average
 
-# # 4. Missing Value Treatment
+# ### 5. Preprocessing
+# 1. Data Cleaning - already done
+# 2. Encoding
 
-# In[50]:
-
-
-# Finding Missing Values
-
-data.apply(lambda x : sum(x.isnull()))
+# In[245]:
 
 
-# 1. Item_Outlet_Sales is the target variable. All the missing values correspond to the test file.
-# 2. Item_Weight has 976 and Outlet_Size has 4016 missing values.
-# 3. Since, Outlet_Size has a lot of missing values, we need to decide whether we can drop this variable entirely.
+data.info()
 
-# In[51]:
-
-
-# Visualizing the missing values:
-
-sns.heatmap(pd.isnull(data),cmap = 'Blues')
-
-
-# In[52]:
-
-
-# Imputing the Missing Values: Item Weight is a numerical variable. So we will impute the NaNa with the mean value.
-data['Item_Weight'][data['Item_Weight'].isnull()] = data['Item_Weight'].mean(skipna = True)
-
-
-# In[53]:
-
-
-data['Outlet_Size'][data['Outlet_Size'].isnull()] = data['Outlet_Size'].mode()
-
-
-# In[54]:
-
-
-sum(data['Outlet_Size'].isnull())
-
-
-# In[55]:
-
-
-data['Outlet_Size'][data['Outlet_Size'].isnull()]
-
-
-# In[56]:
-
-
-data['Outlet_Size'].mode(dropna = True)
-
-
-# In[57]:
-
-
-data.Outlet_Size[data.Outlet_Size.isnull()] = data.Outlet_Size.mode()[0]
-
-
-# In[58]:
-
-
-sns.heatmap(data.isnull())
-
-
-# ### We have succesfully imputed all the missing values.
-
-# # 5. Outlier Detection
 
 # In[ ]:
 

@@ -413,17 +413,28 @@ for col in [ 'Item_Fat_Content', 'Item_Type',
 # 1. Data Cleaning - already done
 # 2. Encoding
 
-# In[245]:
+# In[254]:
+
+
+categorical_columns = [col for col in data.columns if data[col].dtype == 'object']
+print(categorical_columns)
+
+
+# In[267]:
+
+
+one_hot = [col for col in categorical_columns if col not in ['Item_Identifier','Outlet_Identifier']]
+data = pd.get_dummies(data, columns = one_hot)
+
+
+# In[268]:
 
 
 data.info()
 
 
-# In[ ]:
-
-
-
-
+# ### Preprocessing
+# 3. Outlier Detection
 
 # In[ ]:
 
